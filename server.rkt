@@ -13,9 +13,9 @@
 
 ;; const path = require("path");
 (define path ($/require "path"))
-(define url ($/require "url"))
 
-;; __dirname doesnt work in ES6
+;; __dirname doesnt work in ES6, so use workaround
+(define url ($/require "url"))
 (define __dirname
   (#js.path.dirname (#js.url.fileURLToPath #js*.import.meta.url)))
 
@@ -37,8 +37,7 @@
 (define fastify-static ($/require "fastify-static"))
 (#js.fastify.register
  fastify-static
- {$/obj ;[root #js"./public"]
-        [root (#js.path.join #js.__dirname #js"public")]
+ {$/obj [root (#js.path.join #js.__dirname #js"public")]
         [prefix #js"/"]}) ;; optional: default '/'
 
 ;; // fastify-formbody lets us parse incoming forms
@@ -99,6 +98,7 @@
 ;;   reply.view("/src/pages/index.hbs", params);
 ;; });
 (define colors ($/require "./src/colors.json"))
+
 (define (handle-get request reply)
   (define params 
     (if ($/defined? #js.request.query.randomize)
@@ -110,6 +110,7 @@
                  [seo seo]})
         {$/obj [seo seo]}))
   (#js.reply.view #js"/src/pages/index.hbs" params))      
+
 (#js.fastify.get #js"/" handle-get)
  
 
@@ -162,17 +163,17 @@
   (define req-color #js.request.body.color)
   (define params
     (if ($/defined? req-color)
-        (let* ([color-lower (#js.req-color.toLowerCase)]
-               [color (#js.color-lower.trim)])
-       (if ($/defined? ($ colors color))
-           ;; Found one!
-           {$/obj [color ($ colors color)]
-                  [colorError $/null]
-                  [seo seo]}
-           {$/obj [colorError req-color]
-                  [seo seo]}))
+        (let ([color ($> (#js.req-color.toLowerCase) (trim))])
+          (if ($/defined? ($ colors color))
+              ;; Found one!
+              {$/obj [color ($ colors color)]
+                     [colorError $/null]
+                     [seo seo]}
+              {$/obj [colorError req-color]
+                     [seo seo]}))
         {$/obj [seo seo]}))
   (#js.reply.view #js"/src/pages/index.hbs" params))
+
 (#js.fastify.post #js"/" handle-post)
 
 ;; // Run the server and report out to the logs
@@ -185,9 +186,10 @@
 ;;   fastify.log.info(`server listening on ${address}`);
 ;; });
 (define (handle-listen err address)
-  (if ($/binop === err $/null)
+  (unless ($/null? err)
     (#js.fastify.log.error err)
     (#js.process.exit 1))
   (#js.console.log ($/+ #js"Your app is listening on " address))
   (#js.fastify.log.info ($/+ #js"server listening on " address)))
+
 (#js.fastify.listen PORT #js"0.0.0.0" handle-listen)
